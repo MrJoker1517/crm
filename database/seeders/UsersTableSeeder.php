@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class UsersTableSeeder extends Seeder
 {
@@ -15,9 +16,9 @@ class UsersTableSeeder extends Seeder
     public function run()
     {
         User::updateOrCreate(['id' => 1], [
-            'name' => 'SuperAdmin',
+            'name' => 'Super Admin',
             'email' => 'super@admin.com',
-            'password' => '$2y$10$Sz/2/32qibP1iW928ooHY.uIk7y757ROCXMaXFPUiyJBYN8.uKmN2' //12345678
+            'password' => Hash::make('12345678')
         ]);
     }
 }

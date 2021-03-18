@@ -2,9 +2,13 @@
 
 namespace App\Http\Controllers\Admin\Prospects;
 
-use App\Http\Controllers\Controller;
 use App\Models\Prospect;
 use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Storage;
+use App\Http\Requests\Prospects\StoreProspectRequest;
+use App\Http\Requests\Prospects\UpdateProspectRequest;
+use App\Http\Requests\Prospects\UpdateProfileImageRequest;
 
 class ProspectsController extends Controller
 {
@@ -15,7 +19,8 @@ class ProspectsController extends Controller
      */
     public function index()
     {
-        return view('admin.prospects.index', ['prospects' => Prospect::latest()->paginate(10)]);
+        // Show all of our prospects and manage them
+        return view('admin.prospects.index', ['prospects' => Prospect::latest()->paginate(20)]);
     }
 
     /**
@@ -25,6 +30,7 @@ class ProspectsController extends Controller
      */
     public function create()
     {
+        // Go to the prospects creation form
         return view('admin.prospects.create');
     }
 
@@ -34,9 +40,16 @@ class ProspectsController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request)
+    public function store(StoreProspectRequest $request)
     {
-        //
+        $prospect = Prospect::create($request->only('name', 'email'));
+
+        if ($request->hasFile('prodile_image')) {
+            $path = $request->profile_image->store('public/prospects/profiles/images');
+            $prospect->update(['profile_image' => $path]);
+        }
+
+        return redirect()->route('admin.prospects.contacts.create', $prospect->id)->with('success', 'Успешно создан новый проспект');
     }
 
     /**
@@ -45,9 +58,9 @@ class ProspectsController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function show($id)
+    public function show(Prospect $prospect)
     {
-        //
+        return $prospect->load('contact');
     }
 
     /**
@@ -56,9 +69,9 @@ class ProspectsController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function edit($id)
+    public function edit(Prospect $prospect)
     {
-        //
+        return view('admin.prospects.edit', compact('prospect'));
     }
 
     /**
@@ -68,9 +81,34 @@ class ProspectsController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
+    public function update(UpdateProspectRequest $request, Prospect $prospect)
     {
-        //
+        $prospect->update($request->validated());
+
+        return back()->with('success', 'Информация о потенциальном клиенте обновлена!');
+    }
+
+    public function updateProfileImage(UpdateProfileImageRequest $request, Prospect $prospect)
+    {
+        if ($prospect->profile_image) {
+            Storage::delete($prospect->profile_image);
+        }
+        $path = $request->image->store('public/prospects/profiles/images');
+
+        $prospect->update(['profile_image' => $path]);
+
+        return back()->with('success', 'Изображение профиля обновлено');
+    }
+
+    public function destroyProfileImage(Prospect $prospect)
+    {
+        if ($prospect->profile_image) {
+            Storage::delete($prospect->profile_image);
+
+            $prospect->update(['profile_image' => null]);
+        }
+
+        return back()->with('success', 'Изображение профиля удалено!');
     }
 
     /**
@@ -79,8 +117,14 @@ class ProspectsController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function destroy($id)
+    public function destroy(Prospect $prospect)
     {
-        //
+        if ($prospect->profile_image) {
+            Storage::delete($prospect->profile_image);
+        }
+
+        $prospect->delete();
+
+        return redirect()->route('admin.prospects.dashboard')->with('success', 'Успешно удален потенциальный клиент и все связанные с ним активы.');
     }
 }
